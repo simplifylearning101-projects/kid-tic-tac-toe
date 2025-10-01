@@ -62,44 +62,29 @@ export default function Board({ room }: BoardProps) {
           }
         }
 
-        // Update game state
+        // Update game state based on Firebase data
         if (isOver) {
-          // Check if there's a winner
-          const winner = checkWinner(currentBoard);
+          const winner = data.winner;
           if (winner) {
             setStatus(`${winner} Wins! 🎉`);
           } else {
             setStatus("It's a Tie! 🤝");
           }
           setGameReady(false);
-          // Show restart button by ensuring gameOver is true
           setGameOver(true);
         } else if (playerCount === 2) {
-          setGameReady(true);
-          setStatus("Game started! Player X's Turn");
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Game Ready!', { body: 'Second player has joined. Game is starting!' });
+          if (!gameReady) {
+            setGameReady(true);
+            setStatus("Game started! Player X's Turn");
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('Game Ready!', { body: 'Second player has joined. Game is starting!' });
+            }
+          } else {
+            setStatus(`${currentTurn}'s Turn`);
           }
-        } else if (playerCount < 2) {
+        } else {
           setGameReady(false);
           setStatus(`Waiting for opponent... (${playerCount}/2 players)`);
-        } else {
-          updateStatus(currentBoard, data.turn || 'X', false);
-        }
-
-        // Handle game ready state
-        if (playerCount === 2 && !gameReady) {
-          setGameReady(true);
-          setStatus("Game started! Player X's Turn");
-          // Show notification
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Game Ready!', { body: 'Second player has joined. Game is starting!' });
-          }
-        } else if (playerCount < 2) {
-          setGameReady(false);
-          setStatus(`Waiting for opponent... (${playerCount}/2 players)`);
-        } else {
-          updateStatus(data.board || Array(9).fill(''), data.turn || 'X', data.over || false);
         }
 
         // Assign player symbol if not set
@@ -150,24 +135,19 @@ export default function Board({ room }: BoardProps) {
     const newOver = winner !== null || isTie;
     const newTurn = playerSymbol === 'X' ? 'O' : 'X';
     
+    // Update game state in Firebase
     await set(ref(db, `games/${room}`), { 
       ...data, 
       board: newBoard, 
       turn: newTurn, 
       over: newOver,
-      winner: winner
-    });
-
-    // Update local state immediately
-    if (newOver) {
-      setGameOver(true);
-      setGameReady(false);
-      if (winner) {
-        setStatus(`${winner} Wins! 🎉`);
-      } else if (isTie) {
-        setStatus("It's a Tie! 🤝");
+      winner: winner,
+      lastMove: {
+        player: playerSymbol,
+        position: index,
+        timestamp: Date.now()
       }
-    }
+    });
   };
 
   const checkWinner = (board: string[]): string | null => {
