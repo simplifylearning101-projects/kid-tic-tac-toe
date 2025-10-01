@@ -5,6 +5,19 @@ import { useRouter } from 'next/navigation';
 import { ref, onValue, get, set } from 'firebase/database';
 import { db } from '@/lib/firebase';
 
+interface GameRoom {
+  board: string[];
+  turn: 'X' | 'O';
+  over: boolean;
+  players: {
+    [key: string]: 'X' | 'O';
+  };
+}
+
+interface RoomsData {
+  [key: string]: GameRoom;
+}
+
 const ADMIN_PASSWORD = 'admin123'; // In production, use environment variables
 
 export default function Connection() {
@@ -12,7 +25,7 @@ export default function Connection() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [rooms, setRooms] = useState<{[key: string]: any}>({}); 
+  const [rooms, setRooms] = useState<RoomsData>({});
   const router = useRouter();
 
   const generateKey = () => Math.random().toString(36).substring(2, 8).toUpperCase();
