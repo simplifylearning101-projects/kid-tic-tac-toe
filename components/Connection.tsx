@@ -66,12 +66,29 @@ export default function Connection() {
     router.push(`/game/${room}`);
   };
 
-  const joinGame = () => {
-    const room = roomInput.toUpperCase().trim();
+  const joinGame = async () => {
+    const room = roomInput.trim();
     if (!/^\d{6}$/.test(room)) {
       alert('Secret key must be a 6-digit number!');
       return;
     }
+
+    // Check if room exists
+    const gameRef = ref(db, `games/${room}`);
+    const snapshot = await get(gameRef);
+    
+    if (!snapshot.exists()) {
+      alert('Room not found! Please check the room number.');
+      return;
+    }
+
+    // Check if room is full (2 players)
+    const players = snapshot.val().players || {};
+    if (Object.keys(players).length >= 2) {
+      alert('This room is full!');
+      return;
+    }
+
     router.push(`/game/${room}`);
   };
 
