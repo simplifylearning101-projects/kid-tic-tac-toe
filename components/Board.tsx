@@ -72,6 +72,8 @@ export default function Board({ room }: BoardProps) {
             setStatus("It's a Tie! 🤝");
           }
           setGameReady(false);
+          // Show restart button by ensuring gameOver is true
+          setGameOver(true);
         } else if (playerCount === 2) {
           setGameReady(true);
           setStatus("Game started! Player X's Turn");
@@ -148,13 +150,24 @@ export default function Board({ room }: BoardProps) {
     const newOver = winner !== null || isTie;
     const newTurn = playerSymbol === 'X' ? 'O' : 'X';
     
-    set(ref(db, `games/${room}`), { 
+    await set(ref(db, `games/${room}`), { 
       ...data, 
       board: newBoard, 
       turn: newTurn, 
       over: newOver,
       winner: winner
     });
+
+    // Update local state immediately
+    if (newOver) {
+      setGameOver(true);
+      setGameReady(false);
+      if (winner) {
+        setStatus(`${winner} Wins! 🎉`);
+      } else if (isTie) {
+        setStatus("It's a Tie! 🤝");
+      }
+    }
   };
 
   const checkWinner = (board: string[]): string | null => {
@@ -178,7 +191,10 @@ export default function Board({ room }: BoardProps) {
     if (!snapshot.exists()) return;
     
     const existingPlayers = snapshot.val().players || {};
-    set(ref(db, `games/${room}`), { 
+    const existingPlayerCount = Object.keys(existingPlayers).length;
+
+    // Reset game state in Firebase
+    await set(ref(db, `games/${room}`), { 
       board: Array(9).fill(''), 
       turn: 'X', 
       over: false, 
@@ -186,10 +202,11 @@ export default function Board({ room }: BoardProps) {
       players: existingPlayers // Keep existing players
     });
     
+    // Reset local state
     setBoard(Array(9).fill(''));
     setGameOver(false);
-    setGameReady(true); // Keep game ready since players remain
-    setStatus("Game restarted! Player X's Turn");
+    setGameReady(existingPlayerCount === 2); // Only ready if both players still present
+    setStatus(existingPlayerCount === 2 ? "Game restarted! Player X's Turn" : "Waiting for players...");
     // Remove player assignment for restart
     const uid = localStorage.getItem('tic_tac_toe_uid');
     if (uid) {
