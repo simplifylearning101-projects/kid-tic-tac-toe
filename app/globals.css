@@ -1,26 +1,105 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 168, 230, 207;
+  --background-end-rgb: 220, 237, 193;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Comic Sans MS', cursive;
+  background: linear-gradient(to bottom, #a8e6cf, #dcedc1);
+  color: #2f3542;
+  margin: 0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+h1 {
+  color: #ff6b6b;
+  text-align: center;
+  font-size: 2em;
+  margin-bottom: 10px;
+}
+
+#connection, .connection {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+input, button {
+  font-size: 1.2em;
+  padding: 10px;
+  margin: 5px;
+  border: 2px solid #ffd93d;
+  border-radius: 10px;
+  background: white;
+}
+
+button {
+  background: #6bcf7f;
+  color: white;
+  cursor: pointer;
+  min-width: 100px;
+  border: none;
+}
+
+button:hover {
+  background: #5ab66a;
+}
+
+#board, .board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  width: min(90vw, 300px);
+  height: min(90vw, 300px);
+  margin: 20px auto;
+}
+
+.cell {
+  background: white;
+  border: 3px solid #ff8e53;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4em;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.cell:hover {
+  background: #fff3cd;
+}
+
+.cell.x {
+  color: #ff4757;
+}
+
+.cell.o {
+  color: #3742fa;
+}
+
+#status, .status {
+  text-align: center;
+  font-size: 1.5em;
+  color: #2f3542;
+  margin: 10px 0;
+}
+
+#restart, .restart {
+  display: none;
+  margin-top: 20px;
+}
+
+@media (max-width: 480px) {
+  .cell { font-size: 3em; }
+  h1 { font-size: 1.5em; }
 }
