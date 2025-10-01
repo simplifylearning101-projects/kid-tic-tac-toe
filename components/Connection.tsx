@@ -28,7 +28,7 @@ export default function Connection() {
   const [rooms, setRooms] = useState<RoomsData>({});
   const router = useRouter();
 
-  const generateKey = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+  const generateKey = () => Math.floor(100000 + Math.random() * 900000).toString();
 
   useEffect(() => {
     if (isAdmin) {
@@ -68,8 +68,8 @@ export default function Connection() {
 
   const joinGame = () => {
     const room = roomInput.toUpperCase().trim();
-    if (room.length !== 6) {
-      alert('Secret key must be 6 characters!');
+    if (!/^\d{6}$/.test(room)) {
+      alert('Secret key must be a 6-digit number!');
       return;
     }
     router.push(`/game/${room}`);
