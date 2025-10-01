@@ -40,12 +40,50 @@ export default function Board({ room }: BoardProps) {
     const unsubscribe = onValue(gameRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
-        setBoard(data.board || Array(9).fill(''));
-        setGameOver(data.over || false);
+        const currentBoard = data.board || Array(9).fill('');
+        const isOver = data.over || false;
+        const currentTurn = data.turn || 'X';
+        setBoard(currentBoard);
+        setGameOver(isOver);
         
         const players = data.players || {};
         const playerCount = Object.keys(players).length;
         const uid = localStorage.getItem('tic_tac_toe_uid');
+
+        // Update player symbol if needed
+        if (uid) {
+          if (players[uid]) {
+            setPlayerSymbol(players[uid]);
+          } else if (playerCount < 2) {
+            const assigned = Object.values(players) as ('X' | 'O')[];
+            const symbol = assigned.includes('X') ? 'O' : 'X';
+            set(ref(db, `games/${room}/players/${uid}`), symbol);
+            setPlayerSymbol(symbol);
+          }
+        }
+
+        // Update game state
+        if (isOver) {
+          // Check if there's a winner
+          const winner = checkWinner(currentBoard);
+          if (winner) {
+            setStatus(`${winner} Wins! 🎉`);
+          } else {
+            setStatus("It's a Tie! 🤝");
+          }
+          setGameReady(false);
+        } else if (playerCount === 2) {
+          setGameReady(true);
+          setStatus("Game started! Player X's Turn");
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Game Ready!', { body: 'Second player has joined. Game is starting!' });
+          }
+        } else if (playerCount < 2) {
+          setGameReady(false);
+          setStatus(`Waiting for opponent... (${playerCount}/2 players)`);
+        } else {
+          updateStatus(currentBoard, data.turn || 'X', false);
+        }
 
         // Handle game ready state
         if (playerCount === 2 && !gameReady) {
@@ -104,30 +142,54 @@ export default function Board({ room }: BoardProps) {
     if (data.turn !== playerSymbol) return;
     const newBoard = [...board];
     newBoard[index] = playerSymbol;
-    const newOver = checkWinner(newBoard);
+    
+    const winner = checkWinner(newBoard);
+    const isTie = !newBoard.includes('') && !winner;
+    const newOver = winner !== null || isTie;
     const newTurn = playerSymbol === 'X' ? 'O' : 'X';
-    set(ref(db, `games/${room}`), { ...data, board: newBoard, turn: newTurn, over: newOver });
+    
+    set(ref(db, `games/${room}`), { 
+      ...data, 
+      board: newBoard, 
+      turn: newTurn, 
+      over: newOver,
+      winner: winner
+    });
   };
 
-  const checkWinner = (b: string[]): boolean => {
+  const checkWinner = (board: string[]): string | null => {
+    // Check for winner
     for (const win of winConditions) {
-      if (b[win[0]] && b[win[0]] === b[win[1]] && b[win[0]] === b[win[2]]) {
-        return true;
+      const [a, b, c] = win;
+      if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+        return board[a]; // Return the winning symbol (X or O)
       }
     }
-    return !b.includes('');
+    return null;
   };
 
   const handleClick = (index: number) => {
     makeMove(index);
   };
 
-  const restartGame = () => {
-    set(ref(db, `games/${room}`), { board: Array(9).fill(''), turn: 'X', over: false, players: {} });
+  const restartGame = async () => {
+    const gameRef = ref(db, `games/${room}`);
+    const snapshot = await get(gameRef);
+    if (!snapshot.exists()) return;
+    
+    const existingPlayers = snapshot.val().players || {};
+    set(ref(db, `games/${room}`), { 
+      board: Array(9).fill(''), 
+      turn: 'X', 
+      over: false, 
+      winner: null,
+      players: existingPlayers // Keep existing players
+    });
+    
     setBoard(Array(9).fill(''));
-    setPlayerSymbol(null);
     setGameOver(false);
-    setStatus("Player X's Turn");
+    setGameReady(true); // Keep game ready since players remain
+    setStatus("Game restarted! Player X's Turn");
     // Remove player assignment for restart
     const uid = localStorage.getItem('tic_tac_toe_uid');
     if (uid) {
