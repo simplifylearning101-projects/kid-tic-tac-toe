@@ -18,10 +18,16 @@ export default function Board({ room }: BoardProps) {
   const [board, setBoard] = useState<string[]>(Array(9).fill(''));
   const [playerSymbol, setPlayerSymbol] = useState<'X' | 'O' | null>(null);
   const [gameOver, setGameOver] = useState(false);
-  const [status, setStatus] = useState("Player X's Turn");
+  const [status, setStatus] = useState("Waiting for players...");
+  const [gameReady, setGameReady] = useState(false);
 
   // Ensure a unique user ID exists in localStorage
   useEffect(() => {
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     let uid = localStorage.getItem('tic_tac_toe_uid');
     if (!uid) {
       uid = Math.random().toString(36).substring(2, 10);
@@ -36,10 +42,27 @@ export default function Board({ room }: BoardProps) {
         const data = snapshot.val();
         setBoard(data.board || Array(9).fill(''));
         setGameOver(data.over || false);
-        updateStatus(data.board || Array(9).fill(''), data.turn || 'X', data.over || false);
+        
+        const players = data.players || {};
+        const playerCount = Object.keys(players).length;
+        const uid = localStorage.getItem('tic_tac_toe_uid');
+
+        // Handle game ready state
+        if (playerCount === 2 && !gameReady) {
+          setGameReady(true);
+          setStatus("Game started! Player X's Turn");
+          // Show notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Game Ready!', { body: 'Second player has joined. Game is starting!' });
+          }
+        } else if (playerCount < 2) {
+          setGameReady(false);
+          setStatus(`Waiting for opponent... (${playerCount}/2 players)`);
+        } else {
+          updateStatus(data.board || Array(9).fill(''), data.turn || 'X', data.over || false);
+        }
 
         // Assign player symbol if not set
-        const uid = localStorage.getItem('tic_tac_toe_uid');
         if (uid) {
           const players = data.players || {};
           if (players[uid]) {
@@ -72,7 +95,7 @@ export default function Board({ room }: BoardProps) {
   };
 
   const makeMove = async (index: number) => {
-    if (board[index] !== '' || gameOver || !playerSymbol) return;
+    if (board[index] !== '' || gameOver || !playerSymbol || !gameReady) return;
     const gameRef = ref(db, `games/${room}`);
     const snapshot = await get(gameRef);
     if (!snapshot.exists()) return;
@@ -131,7 +154,7 @@ export default function Board({ room }: BoardProps) {
             key={index}
             className={`cell ${cell === 'X' ? 'x' : cell === 'O' ? 'o' : ''}`}
             onClick={() => handleClick(index)}
-            style={{ cursor: (!playerSymbol || gameOver) ? 'not-allowed' : 'pointer', opacity: (!playerSymbol || gameOver) ? 0.6 : 1 }}
+            style={{ cursor: (!playerSymbol || !gameReady || gameOver) ? 'not-allowed' : 'pointer', opacity: (!playerSymbol || !gameReady || gameOver) ? 0.6 : 1 }}
           >
             {cell === 'X' ? '❌' : cell === 'O' ? '⭕' : ''}
           </div>
