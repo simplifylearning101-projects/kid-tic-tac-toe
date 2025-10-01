@@ -64,7 +64,7 @@ export default function Connection() {
 
   return (
     <div className="connection">
-      <h1>🎮 Kid Tic Tac Toe 🎮</h1>
+      <h1>🎮 Tic Tac Toe 🎮</h1>
       <button onClick={createGame}>Create Game</button>
       <p>or</p>
       <input
